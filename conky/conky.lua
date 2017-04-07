@@ -1,4 +1,4 @@
-local vars = {}
+local os    = require('os')
 local ldbus = require('ldbus')
 local dbus  = {
     conn = assert(ldbus.bus.get("session")),
@@ -6,7 +6,12 @@ local dbus  = {
     dest = "org.awesomewm.conky"
 }
 
-assert(ldbus.bus.request_name(dbus.conn, dbus.bus))
+ret = ldbus.bus.request_name(dbus.conn, dbus.bus)
+if ret ~= 'primary_owner' then
+    print('Cannot connect to dbus')
+    os.exit()
+end
+
 -- Emit a method_call through dbus
 -- args is the list of the method args
 function dbus.emit_method(dest, path, iface, method, args)
@@ -22,6 +27,7 @@ function dbus.emit_method(dest, path, iface, method, args)
     -- conn:flush() -- This is not needed?
 end
 
+local vars = {}
 function register_var(var, eval)
     vars[var] = { eval = eval, value = nil }
 end
