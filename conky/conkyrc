@@ -3,10 +3,10 @@ conky.config = {
 	out_to_x            = false,
     out_to_console      = false,
     disable_auto_reload = true,
-	lua_load            = "./conky/conky.lua",
-	lua_draw_hook_pre   = "update_awesome",
-    -- Dont change values above this line
+	lua_load            = "./conky.lua",
+	lua_draw_hook_pre   = "mainloop",
+    -- DO NOT CHANGE ANYTHING ABOVE THIS LINE
 
-    update_interval   = 1,
+    update_interval   = 0.1,
 }
 
