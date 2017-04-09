@@ -15,7 +15,7 @@ function dbus.connect(name)
     own, err = ldbus.bus.request_name(ret, name)
     assert(own, err)
     if own ~= 'primary_owner' then -- probably another conky instance is already running
-        print('Cannot own the dbus interface, most likely an instance is already running')
+        print('Conqueror: cannot connect to dbus interface, most likely another conky service is running')
         os.exit(1)
     end
 
@@ -27,11 +27,13 @@ end
 -- args is the list of the method args
 function dbus.send(method, args)
     local msg  = ldbus.message.new_method_call(dbus.dest, dbus.path, dbus.dest, method)
-    local iter = ldbus.message.iter.new()
-    msg:iter_init_append(iter)
 
-    for _,arg in pairs(args) do
-        iter:append_basic(arg)
+    if args then
+        local iter = ldbus.message.iter.new()
+        msg:iter_init_append(iter)
+        for _,arg in pairs(args) do
+            iter:append_basic(arg)
+        end
     end
 
     dbus.conn:send(msg)

@@ -1,21 +1,40 @@
-local conky = {}
-local dbus = require('dbus')
+local conky = { vars = {} }
+local dbus  = require('dbus')
+local os    = require('os')
 
-function conky.parse(eval)
-    return conky_parse(eval)
-end
-function conky.update_awesome()
+function conky.listen_awesome()
     method, args = dbus.listen()
-    if not method then return end
 
-    if method == 'conky_parse' then
-        assert(args, 'conky_parse expecting argument for conky_parse') -- TODO Handle this
-        local name, expr = args[1], args[2]
-        value = conky.parse(expr)
-        dbus.send('parse_result', {name, value} )
+    if method == 'exit' then
+        os.exit()
+    elseif method == 'update_interval' then
+        conky_set_update_interval(tonumber(args[1]))
+    elseif method == 'register' then
+        local expr = args[1]
+        conky.vars[expr] = 1 -- storing expressions in keys so they're unique
     end
 end
 
+function conky.update_awesome()
+    local results = {}
+
+    for expr, _ in pairs(conky.vars) do
+        local value = conky_parse(expr)
+        table.insert(results, expr)
+        table.insert(results, value)
+    end
+
+    if next(results) then
+        dbus.send('conky_results', results)
+    end
+end
+
+function conky_startup()
+    -- request new values from awesome if awesome was already running
+    dbus.send('get_vars')
+end
+
 function conky_mainloop()
+    conky.listen_awesome()
     conky.update_awesome()
 end

@@ -1,12 +1,19 @@
-conky.text = [[]]
+-- conky will fail if you dont supply this, so supply an empty value
+conky.text = ""
 conky.config = {
-	out_to_x            = false,
-    out_to_console      = false,
+    -- Theres no reason to output anything so disable it
+    out_to_x       = false,
+    out_to_console = false,
+    own_window     = false,
+    -- If this is enabled then conky will exit everytime it relads its config
+    -- as it attemps to own the dbus connecection and fails
     disable_auto_reload = true,
-	lua_load            = "./conky.lua",
-	lua_draw_hook_pre   = "mainloop",
+    -- Load the magic bits :)
+    lua_load           = "./conky.lua",
+    lua_startup_hook   = "startup",
+    lua_draw_hook_post = "mainloop",
     -- DO NOT CHANGE ANYTHING ABOVE THIS LINE
 
-    update_interval   = 0.1,
+    cpu_avg_samples = 10, -- less jumpy cpu
+    update_interval = 0.5,
 }
-

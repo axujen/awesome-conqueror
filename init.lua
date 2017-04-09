@@ -1,76 +1,130 @@
+-- TODO: Documentation, possibly LDoc?
 local module = {}
 
 local capi  = { dbus = dbus }
 local awful = require('awful')
-local timer = require('gears.timer')
+local wibox = require('wibox')
 
 module.dbus  = {
     iface = "org.awesomewm.conqueror",
     conky = "org.awesomewm.conky",
     path  = "/"
 }
-module._vars   = {}
-module._updates = 0
+module._vars      = {}
+module._callbacks = {}
+module._interval  = 0.5
 
--- Parse a conky 
-function module.register(expr, args)
-    local args    = args or {}
-    local name    = args.name or expr
-    local timeout = args.timeout or 1
-    local default = args.default or ""
-    local started = args.started or true
-
-    if not module._vars[name] then
-        module._vars[name] = { expr = expr, timeout = timeout, started = started, value = default }
-
-        if not module._timer then -- create one
-            module._timer  = timer{ timeout = 1, autostart = false, callback = module._conky_update }
-        end
-        if not module._timer.started and started then -- start updating
-            module._timer:start()
-        end
-    end
-
-    return module._vars[name]
+-- Register a callback to be called everytime conky sends an update
+function module.on_update(callback)
+    table.insert(module._callbacks, callback)
+    callback()  -- Run the callback so it can register new expressions with conky
 end
 
--- function called to query conky for updates
-function module._conky_update()
-    if not next(module._vars) then 
-        module._timer:stop()
-    else
-        for name,t in pairs(module._vars) do
-            if t.started and module._updates % t.timeout == 0 then -- Expression specific timeout
-                capi.dbus.emit_signal("session",module.dbus.path,module.dbus.conky,
-                "conky_parse", "s", name, "s", t.expr)
+-- Create a wibox.widget.textbox that will get updated through conky
+function module.textbox(expr, ...)
+    conkywidget = wibox.widget.textbox(nil, ...)
+    module.on_update(function() conkywidget:set_markup(module._get_var(expr)) end)
+    return conkywidget
+end
+
+-- Change conky's update interval
+-- TODO: Proper OOP?
+function module.set_interval(interval)
+    module._interval = interval
+    module._emit_signal('update_interval', interval)
+end
+
+function module.get_interval()
+    return module._interval
+end
+
+-- Fetch the value of a conky expression, register it if its not already registered
+function module._get_var(expr, init_value)
+    local init_value = init_value or ""
+    return module._vars[expr] or module._register_var(expr, init_value)
+end
+
+-- register a conky expression to be parsed
+function module._register_var(expr, init_value)
+    module._vars[expr] = init_value
+    module._emit_signal('register', expr)
+
+    return module._vars[expr]
+end
+
+-- emit a signal to conky
+-- emit_signal(signal, args)
+-- @args can either be a single argument or a table, all argments are passed as strings to dbus
+function module._emit_signal(signal, args)
+    if args then
+        local out_args = {}
+        if type(args) == 'table' then
+            for _,arg in pairs(args) do
+                table.insert(out_args, "s")
+                table.insert(out_args, tostring(arg))
             end
+        else
+            out_args = { 's', tostring(args) }
         end
+        capi.dbus.emit_signal("session",module.dbus.path, module.dbus.conky, signal, unpack(out_args))
+    else
+        capi.dbus.emit_signal("session",module.dbus.path, module.dbus.conky, signal)
     end
-    module._updates = module._updates + 1
 end
-
 
 -- parse conky dbus messages
 function module._parse_dbus(data, ...)
     if data.type == 'method_call' then
-        if data.member == 'parse_result' then
-            local args = {...}
-            local name, value = args[1], args[2]
-            module._vars[name].value = value
+        if data.member == 'conky_results' then
+            module._on_conky_results({...})
+        elseif data.member == 'get_vars' then
+            module._on_get_vars({...})
         end
     end
 end
 
+-- Called by conky to send its results
+function module._on_conky_results(results)
+    -- Update our variables
+    for i = 1,#results,2 do
+        local expr, value = results[i], results[i+1]
+        module._vars[expr] = value
+    end
+
+    -- Fire callbacks
+    for _,callback in pairs(module._callbacks) do
+        callback()
+    end
+end
+
+-- Called by conky on startup
+function module._on_get_vars()
+    for expr,_ in pairs(module._vars) do
+        module._emit_signal('register', expr)
+    end
+end
+
+--[[
+    Conky and dbus initialization
+--]]
+
 -- Register dbus bus
--- TODO: Verify that we have a connection, otherwise dont load the module
+-- TODO: Verify that we have the connection, otherwise dont load the module and throw and error
 connected = capi.dbus.request_name("session", module.dbus.iface)
 capi.dbus.connect_signal(module.dbus.iface, module._parse_dbus)
 
 -- Start the special conky "server"
--- TODO: Figure out how to stop conky with awesome
 local path     = package.searchpath('conqueror', package.path)
 local cdcmd    = string.format([[cd "$(dirname '%s')/conky"]], path)
 local conkycmd = [[conky -qdc conkyrc]]
 awful.spawn.with_shell(string.format("%s && %s", cdcmd, conkycmd))
 
-return module
+-- Stop conky with awesome
+-- TODO: Make this work when killing xephyr
+awesome.connect_signal("exit", function(restart)
+    if not restart then -- stop conky
+        module._emit_signal("exit")
+    end
+end)
+
+return setmetatable(module, { __call = function(_, ...) return module._get_var(...) end } )
