@@ -2,6 +2,13 @@ Conqueror
 =========
 Conqueror is an [awesome](https://github.com/awesomeWM/awesome) module that allows you to use conky as a data source, enabling you to leverage the power of conky directly inside awesome to create any widget you wish.
 
+Why use conqueror/conky instead of various widget libraries?
+---------------------------------
+- Also because conky has more [data](http://conky.sourceforge.net/variables.html) than your average widget library
+- Because you can have widgets that update every 0.5 seconds and slow down your computer to a halt :)
+
+But if you're looking for pre canned widgets then you're in the wrong place, conqueror is made to provide awesome with data, you can then use that data to make any kind of widget you want.
+
 Requirements
 ------------
  * [conky](https://github.com/brndnmtthws/conky)
@@ -15,54 +22,61 @@ Make sure the directory is called conqueror, otherwise conky will not launch aut
 
 Usage
 -----
-First you have to tell the module which conky [variables](http://conky.sourceforge.net/variables.html) you want to have available.
-For now this is done thorugh ``conqueror/conky/conky.lua`` in the bottom add
-``register_var(varname, expr)``
+Conqueror will start its own conky instance, and communicate with it using dbus, conky will be stopped if awesome had a clean exit, if not then you should check your background processes to see if conky is still running.
 
-where name is the name you will use to access it inside rc.lua and expr is any conky expression you may wish to use.
+Note that the conky started through conqueror will not interfere with your regular conky config, so you can still use conky normally if you wish.
 
+Conqueror has three important functions to use:
+* ``conqueror.textbox(expression)`` will return a ``wibox.widget.textbox`` that is automatically updated with ``expression`` being evaluated by conky
+* conqueror(expression) will return the value of ``expression`` after conky evaluates it
+* ``conqueror.on_update(callback)`` will execute callback for every conky update interval, you can then use ``conqueror(expression)`` inside the callback to update your widget more elaborately
 
-then in ``rc.lua``
+Note that ``conqueror(expression)`` will by default return an empty string the first time it is ran on a new ``expression``, this is because conqueror will first have to tell conky to start updating evaluating the new expression.
 
-```lua
-conky = require('conqueror').vars
-```
+Technically ``conqueror(expression)`` will return the last value that was sent by conky so it might take a couple of calls at first to get the value.
 
-this will let you access any value you registered through
-```lua
-conky.varname
-```
+You can also set the conky update interval, which is set to 0.5 by default using ``conqueror.set_interval(interval)``, however this function is rather buggy at this moment so i dont recommend using it, instead change i suggest to change it in conqueror/conkyrc
 
-note conky.value will return an empty string for any var accessed (even if its not registered). this is done to avoid errors at startup when conky has not updated anything yet.
-
-Example
+Examples
 ------------
--- ``conqueror/conky/conky.lua``
+
+This will create a textwidget that will update with cpu memory and information plus a clock.
 
 ```lua
-register_var("CPU", "{$cpu}")
-register_var("MEM", "{$mem}")
+conqueror = require('conqueror')
+
+myconkywidget = conqueror.textbox('$cpu% | $mem | $time)
 ```
 
--- ``rc.lua``
 
+To create a simple mpd widget with notifications from scratch
 ```lua
-timer = require('gears.timer')
-wibox = require('wibox')
-conky = require('conqueror').vars
+conqueror = require('conqueror')
 
-mycpuwidget = wibox.widget.textbox()
-mymemwidget = wibox.widget.textbox()
+mympdwidget = wibox.widget.textbox()
+last_title = ""
+conqueror.on_update(function() 
+        local status = conqueror("$mpd_status")
+        local title = conqueror("$mpd_title")
+        local text = conqueror("$mpd_smart")
 
-cputimer = timer({ timeout = 5, autostart = true, callback = function() mycpuwidget:set_markup(conky.CPU) end })
-memtimer = timer({ timeout = 5, autostart = true, callback = function() mymemwidget:set_markup(conky.MEM) end })
+        if last_title ~= title and status == "Playing" then
+        naughty.notify{ text = text }
+        end
+        last_title = title
+
+        mympdwidget:set_markup(text)
+end)
 ```
 
-This will create two simple cpu and memory widgets that use conky as a data source, now of course you can do much more with conky so this is only an example to show you how to use the module.
 
 TODO
 --------
 * Proper dbus error handling
-* Allow registering conky vars inside awesome
-* Replace lua-ldbus with lgi
+* Replace lua-ldbus with lgi (This possibly might never happen)
 * Provide more elaborate example widgets
+* Provide more complete documentation
+
+Contact
+-------
+You can contact me through github or you can find me the on the awesome [irc channel](https://webchat.oftc.net/?channels=awesome) as axujen, usually idling so just highlight me and ill get back at you as soon as possible.
