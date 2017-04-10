@@ -1,3 +1,8 @@
+-- [[
+-- Licensed under GNU General Public License v2       
+--  Copyright (C) 2017 axujen@autistici.org
+-- ]]
+
 -- TODO: Documentation, possibly LDoc?
 local module = {}
 

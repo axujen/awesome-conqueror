@@ -1,3 +1,8 @@
+-- [[
+-- Licensed under GNU General Public License v2       
+--  Copyright (C) 2017 axujen@autistici.org
+-- ]]
+
 local conky = { vars = {} }
 local dbus  = require('dbus')
 local os    = require('os')

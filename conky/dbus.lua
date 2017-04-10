@@ -1,3 +1,8 @@
+-- [[
+-- Licensed under GNU General Public License v2       
+--  Copyright (C) 2017 axujen@autistici.org
+-- ]]
+
 local dbus  = {}
 local ldbus = require('ldbus')
 local os    = require('os')
