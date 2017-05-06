@@ -15,10 +15,10 @@ Conqueror is an [awesome](https://github.com/awesomeWM/awesome) module that allo
 - Conqueror allows you to build your own widgets using conky as a [data](http://conky.sourceforge.net/variables.html) source
 - Because conky is faster than shell scripts and you can have widgets that update every 0.5 seconds and not slow down your computer to a halt :)
 
-However if you're looking for pre-canned widgets then conqueror is not for your, conqueror does not provide any widgets on its own, it simply gives you the easily build practically any widget you wish.
+However if you're looking for pre-canned widgets then conqueror is not for you, conqueror does not provide any widgets on its own, it simply gives you the tools to easily build practically any widget you wish.
 
 ## Requirements <a name="requirements"></a>
- * [conky](https://github.com/brndnmtthws/conky)
+ * [conky](https://github.com/brndnmtthws/conky) compiled in with lua support
  * [lua-ldbus](https://github.com/daurnimator/ldbus)
 
 ## Installation <a name="installation"></a>
