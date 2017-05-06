@@ -24,8 +24,7 @@ However if you're looking for pre-canned widgets then conqueror is not for you, 
 ## Installation <a name="installation"></a>
 Clone or download this repo to <pre>~/.config/awesome/<b>conqueror</b></pre>
 
-Make sure the directory is called conqueror, otherwise conky will not launch automatically with awesome. (still working on that sorry :/)
-
+Make sure the directory is called conqueror, otherwise conky will have trouble launching directly with awesome.
 ## Loading <a name="loading"></a>
 Currently conqueror is loaded in two steps
 first the awesome module is loaded the usual way by adding `require('conqueror')` to rc.lua
@@ -33,16 +32,9 @@ first the awesome module is loaded the usual way by adding `require('conqueror')
 The second step is starting conky.
 - For systems with awesome compiled with lua5.2 or higher, this can be done automatically by adding `conqueror.conky_launch()` to rc.lua
 
-- For systems with lua5.1 or lower this has to be done manually for the time being by starting conky and pointing it to the shipped [conkyrc](https://github.com/axujen/awesome-conqueror/blob/master/conky/conkyrc). in the conky directory.
-	
-    A shell script to do this would look like:
-	```sh
-	#!/bin/env sh
-	cd path/to/conqueror/conky
-	conky -qdc ./conkyrc
-	```
-	NOTE: you must be in the conqueror/conky directory before you start conky. otherwise it will fail to load its lua module
+- For systems with lua5.1 or lower, you will have to specify location of the conqueror/conky directory to conqueror.conky_launch(), on a classic install this should look like `conqueror.conky_launch(awful.util.getdir('config') .. '/conqueror/conky')`
 
+You may also start conky manually if you wish by changing directory to conqueror/conky and running `conky -qdc ./conkyrc` in a shell.
 ## Usage <a name="usage"></a>
 Conqueror will start its own conky instance, and communicate with it using dbus, conky will be stopped if awesome had a clean exit, if not then you should check your background processes to see if conky is still running.
 
@@ -61,14 +53,12 @@ You can also set the conky update interval, which is set to 0.5 by default using
 
 
 ## Examples <a name="examples"></a>
-The following examples assume you are running awesome compiled with lua5.2.
-If you have lua5.1 or lower remove `conqueror.conky_launch()` and start conky manually. See [Loading](#loading) for more details.
 
 - Create a textwidget that will update with cpu memory and information plus a clock.
 
 	```lua
     conqueror = require('conqueror')
-    conqueror.conky_launch()
+    conqueror.conky_launch(awful.util.getdir('config') .. '/conqueror/conky')
     
     myconkywidget = conqueror.textbox('$cpu% | $mem | $time)
     ```
@@ -77,6 +67,8 @@ If you have lua5.1 or lower remove `conqueror.conky_launch()` and start conky ma
 - Create a simple mpd widget with notifications from scratch
 	```lua
 	conqueror = require('conqueror')
+    conqueror.conky_launch(awful.util.getdir('config') .. '/conqueror/conky')
+
 
 	mympdwidget = wibox.widget.textbox()
 	last_title = ""
@@ -93,6 +85,8 @@ If you have lua5.1 or lower remove `conqueror.conky_launch()` and start conky ma
         	mympdwidget:set_markup(text)
 	end)
 	```
+    
+<br>Note lua5.2 users can use `conqueror.conky_launch()` without an argument. See [Loading](#loading) for more details.
 ## TODO <a name="todo"></a>
 * Proper dbus error handling
 * Load conky automatically in systems with lua5.1
@@ -102,3 +96,4 @@ If you have lua5.1 or lower remove `conqueror.conky_launch()` and start conky ma
 
 ## Contact <a name="contact"></a>
 You can contact me through github or you can find me the on the awesome [irc channel](https://webchat.oftc.net/?channels=awesome) as axujen, usually idling so just highlight me and ill get back at you as soon as possible.
+
