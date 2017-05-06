@@ -6,9 +6,10 @@
 -- TODO: Documentation, possibly LDoc?
 local module = {}
 
-local capi  = { dbus = dbus }
-local awful = require('awful')
-local wibox = require('wibox')
+local capi    = { dbus = dbus }
+local awful   = require('awful')
+local wibox   = require('wibox')
+local naughty = require('naughty')
 
 module.dbus  = {
     iface = "org.awesomewm.conqueror",
@@ -33,7 +34,6 @@ function module.textbox(expr, ...)
 end
 
 -- Change conky's update interval
--- TODO: Proper OOP?
 function module.set_interval(interval)
     module._interval = interval
     module._emit_signal('update_interval', interval)
@@ -109,22 +109,26 @@ function module._on_get_vars()
     end
 end
 
---[[
-    Conky and dbus initialization
---]]
+-- Lua5.2 users simply run conqueror.conky_launch()
+-- Lua5.1 or lower must specify path which is the absolute path to the conqueror/conky directory
+function module.conky_launch(path)
+    -- TODO: Verify that given path is valid
+    if not path then
+        if package.searchpath then
+            local path = package.searchpath('conqueror', package.path)
+            path       = string.format([[cd "$(dirname '%s')/conky"]], path)
+        else -- <= Lua 5.1
+            naughty.notify{
+                preset = naughty.config.presets.critical,
+                title  = "Conqueror: error starting conky server",
+                text = [[Could not find conkyrc directory.
+                Either start conky manually or specify the conkyrc directory to conqueror.conky_launch()]]
+            }
+            return
+        end
+    end
 
--- Register dbus bus
--- TODO: Verify that we have the connection, otherwise dont load the module and throw and error
-connected = capi.dbus.request_name("session", module.dbus.iface)
-capi.dbus.connect_signal(module.dbus.iface, module._parse_dbus)
-
--- Use conqueror.conky_launch() to start the conky server ONLY IF YOU HAVE LUA5.2 OR HIGHER
--- lua5.1 does not have package.searchpath and will cause awesome to fail at startup and fallback
--- to the default config
-function module.conky_launch()
-    -- Start the special conky "server"
-    local path     = package.searchpath('conqueror', package.path)
-    local cdcmd    = string.format([[cd "$(dirname '%s')/conky"]], path)
+    local cdcmd    = string.format([[cd %s]], path)
     local conkycmd = [[conky -qdc conkyrc]]
     awful.spawn.with_shell(string.format("%s && %s", cdcmd, conkycmd))
 
@@ -136,5 +140,13 @@ function module.conky_launch()
         end
     end)
 end
+
+--[[
+    DBus initialization
+--]]
+-- Register dbus bus
+-- TODO: Verify that we have the connection, otherwise dont load the module and throw an error
+connected = capi.dbus.request_name("session", module.dbus.iface)
+capi.dbus.connect_signal(module.dbus.iface, module._parse_dbus)
 
 return setmetatable(module, { __call = function(_, ...) return module._get_var(...) end } )
