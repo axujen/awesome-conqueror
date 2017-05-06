@@ -54,7 +54,7 @@ You can also set the conky update interval, which is set to 0.5 by default using
 
 ## Examples <a name="examples"></a>
 
-- Create a textwidget that will update with cpu memory and information plus a clock.
+- Create a textwidget that will update with cpu and memory information plus a clock.
 
 	```lua
     conqueror = require('conqueror')
