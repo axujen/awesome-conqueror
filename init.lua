@@ -118,18 +118,23 @@ end
 connected = capi.dbus.request_name("session", module.dbus.iface)
 capi.dbus.connect_signal(module.dbus.iface, module._parse_dbus)
 
--- Start the special conky "server"
-local path     = package.searchpath('conqueror', package.path)
-local cdcmd    = string.format([[cd "$(dirname '%s')/conky"]], path)
-local conkycmd = [[conky -qdc conkyrc]]
-awful.spawn.with_shell(string.format("%s && %s", cdcmd, conkycmd))
+-- Use conqueror.conky_launch() to start the conky server ONLY IF YOU HAVE LUA5.2 OR HIGHER
+-- lua5.1 does not have package.searchpath and will cause awesome to fail at startup and fallback
+-- to the default config
+function module.conky_launch()
+    -- Start the special conky "server"
+    local path     = package.searchpath('conqueror', package.path)
+    local cdcmd    = string.format([[cd "$(dirname '%s')/conky"]], path)
+    local conkycmd = [[conky -qdc conkyrc]]
+    awful.spawn.with_shell(string.format("%s && %s", cdcmd, conkycmd))
 
--- Stop conky with awesome
--- TODO: Make this work when killing xephyr
-awesome.connect_signal("exit", function(restart)
-    if not restart then -- stop conky
-        module._emit_signal("exit")
-    end
-end)
+    -- Stop conky with awesome
+    -- TODO: Make this work when killing xephyr
+    awesome.connect_signal("exit", function(restart)
+        if not restart then -- stop conky
+            module._emit_signal("exit")
+        end
+    end)
+end
 
 return setmetatable(module, { __call = function(_, ...) return module._get_var(...) end } )
